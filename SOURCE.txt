@@ -1,0 +1,13 @@
+makefun-diff 1.0.0, make.fun's own reference program, as the house entry.
+
+  source    https://registry.npmjs.org/diff/-/diff-9.0.0.tgz
+            (the first upstream it derives from, below)
+  licence   MIT (LICENSE, NOTICE, kept beside the package)
+  tree      vendor/makefun-diff/ digests to c012c4423ca6b133e97c50477b18b627ee205cc2be61da63084c285624277c2e
+            (server/competitions/load.ts treeSha256: the bytes the subject file names)
+  called    vendor/makefun-diff/index.js, its diffPatch, on each case's input
+  derived   jsdiff 9.0.0, BSD-3-Clause, https://registry.npmjs.org/diff/-/diff-9.0.0.tgz
+            Copyright (c) 2009-2015, Kevin Decker <kpdecker@gmail.com>
+
+vendor/makefun-diff/ is make.fun's own code, not a vendored package: its LICENSE is make.fun's (MIT), and its NOTICE
+carries each upstream's licence and copyright line word for word.

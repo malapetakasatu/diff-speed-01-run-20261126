@@ -1,0 +1,9 @@
+{
+  "name": "makefun-diff",
+  "version": "1.0.0",
+  "description": "make.fun's own line diff: make.fun's patch grammar and its own tie-break between equally short edit scripts, derived from jsdiff 9.0.0's Myers line diff.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "exports": "./index.js"
+}
