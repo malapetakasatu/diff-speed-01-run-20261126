@@ -51,11 +51,14 @@ const INSERT = '+';
 
 /** A text's lines, each with its "\n" (the last one without, when the text does not end in one). */
 export function tokenize(text) {
-  const parts = text.split('\n');
   const lines = [];
-  const last = parts.length - 1;
-  for (let i = 0; i < last; i++) lines.push(`${parts[i]}\n`);
-  if (parts[last] !== '') lines.push(parts[last]);
+  let start = 0;
+  let idx = 0;
+  while ((idx = text.indexOf('\n', start)) !== -1) {
+    lines.push(text.slice(start, idx + 1));
+    start = idx + 1;
+  }
+  if (start < text.length) lines.push(text.slice(start));
   return lines;
 }
 
@@ -95,12 +98,12 @@ function editRuns(oldTokens, newTokens) {
   if (oldLen === 0) return [{ kind: '+', count: newLen }];
   if (newLen === 0) return [{ kind: '-', count: oldLen }];
 
-  const map = new Map();
+  const map = Object.create(null);
   let nextId = 1;
   for (let i = 0; i < oldLen; i++) {
     const s = oldTokens[i];
-    let id = map.get(s);
-    if (id === undefined) { id = nextId++; map.set(s, id); }
+    let id = map[s];
+    if (id === undefined) { id = nextId++; map[s] = id; }
     wasmOldIds[i] = id;
   }
   for (let i = 0; i < newLen; i++) {
@@ -109,8 +112,8 @@ function editRuns(oldTokens, newTokens) {
       wasmNewIds[i] = wasmOldIds[i];
       continue;
     }
-    let id = map.get(s);
-    if (id === undefined) { id = nextId++; map.set(s, id); }
+    let id = map[s];
+    if (id === undefined) { id = nextId++; map[s] = id; }
     wasmNewIds[i] = id;
   }
 
@@ -126,7 +129,7 @@ function editRuns(oldTokens, newTokens) {
 
 /** A line as the patch writes it: its op, the line, a newline, and "%" on a line of its own when it had none. */
 function written(op, line) {
-  return line.endsWith('\n') ? `${op}${line}` : `${op}${line}\n%\n`;
+  return line.charCodeAt(line.length - 1) === 10 ? `${op}${line}` : `${op}${line}\n%\n`;
 }
 
 /** make.fun's own patch of input.old into input.new (the header). */
@@ -154,13 +157,14 @@ export function diffPatch(input) {
   let p = 0;
   let deleted = 0;
   let inserted = 0;
-  for (const r of runs) {
+  for (let i = 0; i < runs.length; i++) {
+    const r = runs[i];
     if (r.kind === KEEP) {
       o += r.count;
       p += r.count;
       continue;
     }
-    let c = changes.at(-1);
+    let c = changes.length > 0 ? changes[changes.length - 1] : undefined;
     if (c === undefined || c.o + c.dels !== o || c.p + c.ins !== p) {
       c = { o, p, dels: 0, ins: 0 };
       changes.push(c);
@@ -178,16 +182,18 @@ export function diffPatch(input) {
 
   // The hunks: change runs at most 2 * CONTEXT kept lines apart share one.
   const hunks = [];
-  for (const c of changes) {
-    const h = hunks.at(-1);
-    const prev = h?.at(-1);
+  for (let i = 0; i < changes.length; i++) {
+    const c = changes[i];
+    const h = hunks.length > 0 ? hunks[hunks.length - 1] : undefined;
+    const prev = h && h.length > 0 ? h[h.length - 1] : undefined;
     if (prev !== undefined && c.o - (prev.o + prev.dels) <= 2 * CONTEXT) h.push(c);
     else hunks.push([c]);
   }
   const out = [`${FORMAT} old=${n} new=${m} hunks=${hunks.length} deleted=${deleted} inserted=${inserted}\n`];
-  for (const h of hunks) {
+  for (let i = 0; i < hunks.length; i++) {
+    const h = hunks[i];
     const first = h[0];
-    const last = h.at(-1);
+    const last = h[h.length - 1];
     const oldStart = Math.max(0, first.o - CONTEXT);
     const newStart = first.p - (first.o - oldStart);
     const after = Math.min(CONTEXT, n - (last.o + last.dels));
@@ -195,10 +201,11 @@ export function diffPatch(input) {
     const newEnd = last.p + last.ins + after;
     out.push(`@ ${oldStart + 1} ${oldEnd - oldStart} ${newStart + 1} ${newEnd - newStart}\n`);
     let at = oldStart;
-    for (const c of h) {
+    for (let j = 0; j < h.length; j++) {
+      const c = h[j];
       for (; at < c.o; at++) out.push(written(KEEP, a[at]));
-      for (let i = 0; i < c.dels; i++) out.push(written(DELETE, a[c.o + i]));
-      for (let i = 0; i < c.ins; i++) out.push(written(INSERT, b[c.p + i]));
+      for (let k = 0; k < c.dels; k++) out.push(written(DELETE, a[c.o + k]));
+      for (let k = 0; k < c.ins; k++) out.push(written(INSERT, b[c.p + k]));
       at = c.o + c.dels;
     }
     for (; at < oldEnd; at++) out.push(written(KEEP, a[at]));
