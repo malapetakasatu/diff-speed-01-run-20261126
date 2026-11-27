@@ -105,6 +105,10 @@ function editRuns(oldTokens, newTokens) {
   }
   for (let i = 0; i < newLen; i++) {
     const s = newTokens[i];
+    if (i < oldLen && s === oldTokens[i]) {
+      wasmNewIds[i] = wasmOldIds[i];
+      continue;
+    }
     let id = map.get(s);
     if (id === undefined) { id = nextId++; map.set(s, id); }
     wasmNewIds[i] = id;
